@@ -10,14 +10,12 @@ st.markdown("""
   * { font-family: Helvetica, Arial, sans-serif !important; }
   h1,h2,h3,h4,strong,b { font-weight: 700 !important; letter-spacing:.2px; }
   .subtitle { font-style: italic; margin-top:-6px; margin-bottom:14px; }
-
   /* Section boxes */
   [data-testid="stContainer"] > div[style*="border: 1px solid"] {
     border: 1px solid rgba(255,255,255,0.85) !important;
     border-radius: 14px !important;
     padding: 8px 12px !important;
   }
-
   /* SL buffer: pill radio buttons */
   .slbtn [role="radiogroup"] { margin:0 !important; }
   .slbtn [role="radiogroup"] label {
@@ -33,16 +31,16 @@ st.markdown("""
     border-radius:999px;
     padding:6px 12px;
   }
-
   /* Value cards */
   .valbox { border-radius:12px; padding:12px 14px; text-align:center; font-weight:800; font-size:1.05rem; }
-  .val-red   { background:#3b1d1d; color:#ff6b6b; }
+  .val-red { background:#3b1d1d; color:#ff6b6b; }
   .val-green { background:#1d3b1d; color:#66ff91; }
-  .val-blue  { background:#1d263b; color:#8eb8ff; }
-
+  .val-blue { background:#1d263b; color:#8eb8ff; }
   .stNumberInput > div > div > input { font-weight:700; }
   div[data-testid="column"] h3, div[data-testid="column"] h2 { text-align:center; }
   div[data-testid="column"] p { text-align:center; }
+  /* Additional alignment for columns */
+  div[data-testid="column"] { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,6 +49,31 @@ DEC = 4
 BASE_STEP_MULT = 0.5
 NUDGE_MULT = 0.25
 TP_MULT = 2.0
+
+# ---------- Helper Functions ----------
+def ladder_count(zone_w: float, atr_val: float, adx_val: float):
+    if atr_val <= 0:
+        return 2, 0.0
+    k = zone_w / atr_val
+    base = 2 if k < 1.2 else 3
+    if adx_val >= 25:
+        base = max(2, base - 1)
+    return base, k
+
+def macd_nudged_step(side: str, base_step: float, macd_state: str, atr_val: float) -> float:
+    if macd_state == "Neutral": return base_step
+    if side == "Long":
+        return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bullish" else (base_step + NUDGE_MULT*atr_val)
+    else:
+        return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bearish" else (base_step + NUDGE_MULT*atr_val)
+
+def clamp(x, lo, hi): return max(lo, min(hi, x))
+
+def deltas_from_market(px: float, mkt: float, side: str):
+    d = abs(px - mkt)
+    pct = (d / mkt * 100) if mkt > 0 else 0.0
+    where = ("below" if px < mkt else "above") if side == "Long" else ("above" if px > mkt else "below")
+    return d, pct, where
 
 # ---------- Title ----------
 st.markdown("# Ladder Calculator")
@@ -79,7 +102,6 @@ with st.container(border=True):
 with st.container(border=True):
     st.markdown("### **Technical Indicators**")
     col1, col2, col3, col4 = st.columns([1,1,1,1])
-
     # Left (Compulsory)
     with col1:
         st.markdown("**ATR (4h, 14)**")
@@ -87,7 +109,6 @@ with st.container(border=True):
     with col2:
         st.markdown("**MACD (1h, 12-26-9)**")
         macd = st.selectbox("MACD", ["Neutral", "Bullish", "Bearish"], label_visibility="collapsed")
-
     # Right (Optional)
     with col3:
         st.markdown("**ADX (4h, 14) (Optional)**")
@@ -110,31 +131,6 @@ with st.container(border=True):
 
 calc = st.button("Calculate ladders")
 
-# ---------- Helper Functions ----------
-def ladder_count(zone_w: float, atr_val: float, adx_val: float):
-    if atr_val <= 0:
-        return 2, 0.0
-    k = zone_w / atr_val
-    base = 2 if k < 1.2 else 3
-    if adx_val >= 25:
-        base = max(2, base - 1)
-    return base, k
-
-def macd_nudged_step(side: str, base_step: float, macd_state: str, atr_val: float) -> float:
-    if macd_state == "Neutral": return base_step
-    if side == "Long":
-        return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bullish" else (base_step + NUDGE_MULT*atr_val)
-    else:
-        return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bearish" else (base_step + NUDGE_MULT*atr_val)
-
-def clamp(x, lo, hi): return max(lo, min(hi, x))
-
-def deltas_from_market(px: float, mkt: float, side: str):
-    d = abs(px - mkt)
-    pct = (d / mkt * 100) if mkt > 0 else 0.0
-    where = ("below" if px < mkt else "above") if side == "Long" else ("above" if px > mkt else "below")
-    return d, pct, where
-
 # ---------- Compute ----------
 if calc:
     if market <= 0 or atr <= 0 or zone_upper <= 0 or zone_lower <= 0:
@@ -143,23 +139,24 @@ if calc:
     if zone_lower >= zone_upper:
         st.error("**Lower Zone** must be less than **Upper Zone**.")
         st.stop()
-
     zone_w = zone_upper - zone_lower
     ladders, k = ladder_count(zone_w, atr, adx)
     base_step = BASE_STEP_MULT * atr
     step = macd_nudged_step(side, base_step, macd, atr)
-
     # Ladder levels
     L = [market]
     if side == "Long":
         L1 = clamp(market - step, zone_lower, zone_upper); L.append(L1)
         if ladders == 3:
             L2 = clamp(L1 - step, zone_lower, zone_upper); L.append(L2)
+        # Sort ladders descending for consistent display (highest to lowest price)
+        L.sort(reverse=True)
     else:
         L1 = clamp(market + step, zone_lower, zone_upper); L.append(L1)
         if ladders == 3:
             L2 = clamp(L1 + step, zone_lower, zone_upper); L.append(L2)
-
+        # Sort ladders descending for consistent display (highest to lowest price)
+        L.sort(reverse=True)
     # Stop loss and TP
     if side == "Long":
         sl = zone_lower - sl_buf*atr
@@ -167,40 +164,32 @@ if calc:
     else:
         sl = zone_upper + sl_buf*atr
         tp = market - TP_MULT*atr
-
     # ---------- Results ----------
     st.markdown("## Results")
-
     cols = st.columns(len(L))
     for i, px in enumerate(L):
         d, pct, where = deltas_from_market(px, market, side)
-        title_top = "L0" if i == 0 else f"L{i}"
-        subtitle = "Market Price" if i == 0 else ""
+        title_top = f"L{i}"
+        subtitle = "Market Price" if px == market else ""
         with cols[i]:
             st.markdown(f"**{title_top}**")
             if subtitle: st.caption(f"**{subtitle}**")
             st.markdown(f"<div class='valbox val-blue'><strong>{px:.{DEC}f}</strong></div>", unsafe_allow_html=True)
             st.caption(f"Δ {d:.{DEC}f} ({pct:.2f}%), {where} market")
-
     st.divider()
-
     rr = ((tp - market) / max(market - sl, 1e-12)) if side == "Long" else ((market - tp) / max(sl - market, 1e-12))
     a, b, c = st.columns(3)
-
     with a:
         st.markdown("<h3>Stop Loss</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-red'><strong>{sl:.{DEC}f}</strong></div>", unsafe_allow_html=True)
         st.caption(f"Rule: {'LZ −' if side=='Long' else 'UZ +'} {sl_buf:.1f}×ATR")
-
     with b:
         st.markdown("<h3>Take Profit</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-green'><strong>{tp:.{DEC}f}</strong></div>", unsafe_allow_html=True)
         st.caption(f"Rule: Entry {'+' if side=='Long' else '−'} {TP_MULT:.1f}×ATR (fixed)")
-
     with c:
         st.markdown("<h3>Reward : Risk</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-blue'><strong>{rr:.2f} : 1</strong></div>", unsafe_allow_html=True)
-
     st.divider()
     st.caption(
         f"Zone width = {zone_w:.{DEC}f} • ATR = {atr:.{DEC}f} • "
