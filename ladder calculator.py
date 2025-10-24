@@ -1,23 +1,21 @@
-# ladder_calculator.py — Ladder Calculator (clean boxes, corrected capitalization)
+# ladder_calculator.py — Final Polished Version
 
 import streamlit as st
 
 st.set_page_config(page_title="Ladder Calculator", page_icon="📊", layout="centered")
 
-# ---------- Minimal, precise CSS ----------
+# ---------- CSS ----------
 st.markdown("""
 <style>
   * { font-family: Helvetica, Arial, sans-serif !important; }
   h1,h2,h3,h4,strong,b { font-weight: 700 !important; letter-spacing:.2px; }
   .subtitle { font-style: italic; margin-top:-6px; margin-bottom:14px; }
 
-  /* ONLY style the four section cards (st.container with border=True). */
   [data-testid="stContainer"] > div[style*="border: 1px solid"] {
-    border: 1px solid rgba(255,255,255,0.85) !important;  /* crisp white outline */
+    border: 1px solid rgba(255,255,255,0.85) !important;
     border-radius: 14px !important;
   }
 
-  /* SL buffer radio as two pill buttons */
   .slbtn [role="radiogroup"] { margin:0 !important; }
   .slbtn [role="radiogroup"] label {
     border:1px solid rgba(255,255,255,0.18);
@@ -33,77 +31,70 @@ st.markdown("""
     padding:6px 12px;
   }
 
-  /* Value cards */
   .valbox { border-radius:12px; padding:12px 14px; text-align:center; font-weight:800; font-size:1.05rem; }
   .val-red   { background:#3b1d1d; color:#ff6b6b; }
   .val-green { background:#1d3b1d; color:#66ff91; }
   .val-blue  { background:#1d263b; color:#8eb8ff; }
 
-  /* Inputs readable (no extra borders) */
   .stNumberInput > div > div > input { font-weight:700; }
+
+  /* Center final result headings */
+  div[data-testid="column"] h3, div[data-testid="column"] h2 {
+    text-align: center;
+  }
+  div[data-testid="column"] p {
+    text-align: center;
+  }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------- Constants ----------
 DEC = 4
-BASE_STEP_MULT = 0.5     # base spacing = 0.5 × ATR
-NUDGE_MULT = 0.25        # MACD nudge = ±0.25 × ATR
-TP_MULT = 2.0            # fixed TP = 2.0 × ATR
+BASE_STEP_MULT = 0.5
+NUDGE_MULT = 0.25
+TP_MULT = 2.0
 
-# ---------- Title & Slogan ----------
+# ---------- Title ----------
 st.markdown("# Ladder Calculator")
 st.markdown("<div class='subtitle'>Dynamic Ladder Mapping for Smarter Positioning</div>", unsafe_allow_html=True)
 
-# ============= BOX 1: Direction =============
+# ============= 1️⃣ Direction =============
 with st.container(border=True):
     st.markdown("### **Direction**")
     side = st.radio("Direction", ["Long", "Short"], horizontal=True, label_visibility="collapsed")
 
-st.write("")
-
-# ============= BOX 2: Market Structure =============
+# ============= 2️⃣ Market Structure =============
 with st.container(border=True):
     st.markdown("### **Market Structure**")
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("**Market Price**")
-        market = st.number_input("Market Price", min_value=0.0, format="%.4f",
-                                 key="mkt", label_visibility="collapsed")
+        market = st.number_input("Market Price", min_value=0.0, format="%.4f", key="mkt", label_visibility="collapsed")
     with c2:
         st.markdown("**Upper Zone (UZ)**")
-        zone_upper = st.number_input("Upper Zone", min_value=0.0, format="%.4f",
-                                     key="zu", label_visibility="collapsed")
+        zone_upper = st.number_input("Upper Zone", min_value=0.0, format="%.4f", key="zu", label_visibility="collapsed")
     with c3:
         st.markdown("**Lower Zone (LZ)**")
-        zone_lower = st.number_input("Lower Zone", min_value=0.0, format="%.4f",
-                                     key="zl", label_visibility="collapsed")
+        zone_lower = st.number_input("Lower Zone", min_value=0.0, format="%.4f", key="zl", label_visibility="collapsed")
 
-st.write("")
-
-# ============= BOX 3: Technical Indicators =============
+# ============= 3️⃣ Technical Indicators =============
 with st.container(border=True):
     st.markdown("### **Technical Indicators**")
     d1, d2, d3, d4 = st.columns(4)
     with d1:
         st.markdown("**ATR (4h, 14)**")
-        atr = st.number_input("ATR", min_value=0.0, format="%.4f",
-                              key="atr", label_visibility="collapsed")
+        atr = st.number_input("ATR", min_value=0.0, format="%.4f", key="atr", label_visibility="collapsed")
     with d2:
         st.markdown("**ADX (4h, 14) (optional)**")
-        adx = st.number_input("ADX", min_value=0.0, value=0.0, step=0.5, format="%.2f",
-                              key="adx", label_visibility="collapsed")
+        adx = st.number_input("ADX", min_value=0.0, value=0.0, step=0.5, format="%.2f", key="adx", label_visibility="collapsed")
     with d3:
-        st.markdown("**RSI-3 trigger (optional)**")
-        rsi_trigger = st.selectbox("RSI-3", ["None", "Crossed 20↑", "Crossed 50↑"],
-                                   label_visibility="collapsed")
+        st.markdown("**RSI-3 Trigger (optional)**")
+        rsi_trigger = st.selectbox("RSI-3", ["None", "Crossed 20↑", "Crossed 50↑"], label_visibility="collapsed")
     with d4:
         st.markdown("**MACD (1h, 12-26-9)**")
-        macd = st.selectbox("MACD", ["Neutral", "Bullish", "Bearish"],
-                            label_visibility="collapsed")
+        macd = st.selectbox("MACD", ["Neutral", "Bullish", "Bearish"], label_visibility="collapsed")
 
-st.write("")
-
-# ============= BOX 4: Stop-Loss Buffer =============
+# ============= 4️⃣ Stop-Loss Buffer =============
 with st.container(border=True):
     st.markdown("### **Stop-Loss Buffer**")
     st.markdown("<div class='slbtn'>", unsafe_allow_html=True)
@@ -117,7 +108,7 @@ with st.container(border=True):
 
 calc = st.button("Calculate ladders")
 
-# ---------- Helpers ----------
+# ---------- Helper Functions ----------
 def ladder_count(zone_w: float, atr_val: float, adx_val: float):
     if atr_val <= 0:
         return 2, 0.0
@@ -128,22 +119,20 @@ def ladder_count(zone_w: float, atr_val: float, adx_val: float):
     return base, k
 
 def macd_nudged_step(side: str, base_step: float, macd_state: str, atr_val: float) -> float:
-    if macd_state == "Neutral":
-        return base_step
+    if macd_state == "Neutral": return base_step
     if side == "Long":
         return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bullish" else (base_step + NUDGE_MULT*atr_val)
     else:
         return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bearish" else (base_step + NUDGE_MULT*atr_val)
 
 def clamp(x, lo, hi): return max(lo, min(hi, x))
-
 def deltas_from_market(px: float, mkt: float, side: str):
     d = abs(px - mkt)
     pct = (d / mkt * 100) if mkt > 0 else 0.0
     where = ("below" if px < mkt else "above") if side == "Long" else ("above" if px > mkt else "below")
     return d, pct, where
 
-# ---------- Compute & Results ----------
+# ---------- Compute ----------
 if calc:
     if market <= 0 or atr <= 0 or zone_upper <= 0 or zone_lower <= 0:
         st.error("Please enter positive numbers for **Market**, **ATR**, **Upper Zone**, and **Lower Zone**.")
@@ -157,18 +146,14 @@ if calc:
     base_step = BASE_STEP_MULT * atr
     step = macd_nudged_step(side, base_step, macd, atr)
 
-    # Ladders (L0 at market)
     L = [market]
     if side == "Long":
         L1 = clamp(market - step, zone_lower, zone_upper); L.append(L1)
-        if ladders == 3:
-            L2 = clamp(L1 - step, zone_lower, zone_upper); L.append(L2)
+        if ladders == 3: L2 = clamp(L1 - step, zone_lower, zone_upper); L.append(L2)
     else:
         L1 = clamp(market + step, zone_lower, zone_upper); L.append(L1)
-        if ladders == 3:
-            L2 = clamp(L1 + step, zone_lower, zone_upper); L.append(L2)
+        if ladders == 3: L2 = clamp(L1 + step, zone_lower, zone_upper); L.append(L2)
 
-    # Fixed TP = 2.0×ATR; SL from zone edge ± buffer×ATR
     if side == "Long":
         sl = zone_lower - sl_buf*atr
         tp = market + TP_MULT*atr
@@ -176,36 +161,36 @@ if calc:
         sl = zone_upper + sl_buf*atr
         tp = market - TP_MULT*atr
 
-    # Results
+    # ---------- Results ----------
     st.markdown("## Results")
-
     cols = st.columns(len(L))
     for i, px in enumerate(L):
         d, pct, where = deltas_from_market(px, market, side)
         title_top = "L0" if i == 0 else f"L{i}"
-        title_sub = "Market" if i == 0 else "\u00A0"
+        subtitle = "Market Price" if i == 0 else ""
         with cols[i]:
             st.markdown(f"**{title_top}**")
-            st.caption(f"**{title_sub}**")
+            if subtitle: st.caption(f"**{subtitle}**")
             st.markdown(f"<div class='valbox val-blue'><strong>{px:.{DEC}f}</strong></div>", unsafe_allow_html=True)
             st.caption(f"Δ {d:.{DEC}f} ({pct:.2f}%), {where} market")
-            if px == zone_lower or px == zone_upper:
-                st.caption("🔒 Clipped to zone edge")
 
     st.divider()
 
     rr = ((tp - market) / max(market - sl, 1e-12)) if side == "Long" else ((market - tp) / max(sl - market, 1e-12))
     a, b, c = st.columns(3)
+
     with a:
-        st.markdown("**Stop Loss**")
+        st.markdown("<h3>Stop Loss</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-red'><strong>{sl:.{DEC}f}</strong></div>", unsafe_allow_html=True)
         st.caption(f"Rule: {'LZ −' if side=='Long' else 'UZ +'} {sl_buf:.1f}×ATR")
+
     with b:
-        st.markdown("**Take Profit**")
+        st.markdown("<h3>Take Profit</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-green'><strong>{tp:.{DEC}f}</strong></div>", unsafe_allow_html=True)
         st.caption(f"Rule: Entry {'+' if side=='Long' else '−'} {TP_MULT:.1f}×ATR (fixed)")
+
     with c:
-        st.markdown("**Reward : Risk**")
+        st.markdown("<h3>Reward : Risk</h3>", unsafe_allow_html=True)
         st.markdown(f"<div class='valbox val-blue'><strong>{rr:.2f} : 1</strong></div>", unsafe_allow_html=True)
 
     st.divider()
