@@ -1,4 +1,4 @@
-# ladder_calculator.py — Final Polished Version
+# ladder_calculator.py — Final Polished Ladder Calculator
 
 import streamlit as st
 
@@ -11,11 +11,13 @@ st.markdown("""
   h1,h2,h3,h4,strong,b { font-weight: 700 !important; letter-spacing:.2px; }
   .subtitle { font-style: italic; margin-top:-6px; margin-bottom:14px; }
 
+  /* Crisp white outline only for section containers */
   [data-testid="stContainer"] > div[style*="border: 1px solid"] {
     border: 1px solid rgba(255,255,255,0.85) !important;
     border-radius: 14px !important;
   }
 
+  /* SL buffer: pill radio buttons */
   .slbtn [role="radiogroup"] { margin:0 !important; }
   .slbtn [role="radiogroup"] label {
     border:1px solid rgba(255,255,255,0.18);
@@ -31,28 +33,26 @@ st.markdown("""
     padding:6px 12px;
   }
 
+  /* Value cards */
   .valbox { border-radius:12px; padding:12px 14px; text-align:center; font-weight:800; font-size:1.05rem; }
   .val-red   { background:#3b1d1d; color:#ff6b6b; }
   .val-green { background:#1d3b1d; color:#66ff91; }
   .val-blue  { background:#1d263b; color:#8eb8ff; }
 
+  /* Inputs readable (no extra borders added) */
   .stNumberInput > div > div > input { font-weight:700; }
 
-  /* Center final result headings */
-  div[data-testid="column"] h3, div[data-testid="column"] h2 {
-    text-align: center;
-  }
-  div[data-testid="column"] p {
-    text-align: center;
-  }
+  /* Center headings in the 3 result columns */
+  div[data-testid="column"] h3, div[data-testid="column"] h2 { text-align:center; }
+  div[data-testid="column"] p { text-align:center; }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------- Constants ----------
 DEC = 4
-BASE_STEP_MULT = 0.5
-NUDGE_MULT = 0.25
-TP_MULT = 2.0
+BASE_STEP_MULT = 0.5     # base spacing = 0.5 × ATR
+NUDGE_MULT = 0.25        # MACD nudge = ±0.25 × ATR
+TP_MULT = 2.0            # fixed TP = 2.0 × ATR
 
 # ---------- Title ----------
 st.markdown("# Ladder Calculator")
@@ -77,24 +77,28 @@ with st.container(border=True):
         st.markdown("**Lower Zone (LZ)**")
         zone_lower = st.number_input("Lower Zone", min_value=0.0, format="%.4f", key="zl", label_visibility="collapsed")
 
-# ============= 3️⃣ Technical Indicators =============
+# ============= 3️⃣ Technical Indicators (required left, optional right) =============
 with st.container(border=True):
     st.markdown("### **Technical Indicators**")
-    d1, d2, d3, d4 = st.columns(4)
-    with d1:
+    left1, left2, right1, right2 = st.columns([1,1,1,1])
+
+    # Required (left)
+    with left1:
         st.markdown("**ATR (4h, 14)**")
         atr = st.number_input("ATR", min_value=0.0, format="%.4f", key="atr", label_visibility="collapsed")
-    with d2:
-        st.markdown("**ADX (4h, 14) (optional)**")
-        adx = st.number_input("ADX", min_value=0.0, value=0.0, step=0.5, format="%.2f", key="adx", label_visibility="collapsed")
-    with d3:
-        st.markdown("**RSI-3 Trigger (optional)**")
-        rsi_trigger = st.selectbox("RSI-3", ["None", "Crossed 20↑", "Crossed 50↑"], label_visibility="collapsed")
-    with d4:
+    with left2:
         st.markdown("**MACD (1h, 12-26-9)**")
         macd = st.selectbox("MACD", ["Neutral", "Bullish", "Bearish"], label_visibility="collapsed")
 
-# ============= 4️⃣ Stop-Loss Buffer =============
+    # Optional (right)
+    with right1:
+        st.markdown("**ADX (4h, 14) (Optional)**")
+        adx = st.number_input("ADX", min_value=0.0, value=0.0, step=0.5, format="%.2f", key="adx", label_visibility="collapsed")
+    with right2:
+        st.markdown("**RSI-3 Trigger (Optional)**")
+        rsi_trigger = st.selectbox("RSI-3", ["None", "Crossed 20↑", "Crossed 50↑"], label_visibility="collapsed")
+
+# ============= 4️⃣ Stop-Loss Buffer (same heading size as Direction) =============
 with st.container(border=True):
     st.markdown("### **Stop-Loss Buffer**")
     st.markdown("<div class='slbtn'>", unsafe_allow_html=True)
@@ -108,7 +112,7 @@ with st.container(border=True):
 
 calc = st.button("Calculate ladders")
 
-# ---------- Helper Functions ----------
+# ---------- Helpers ----------
 def ladder_count(zone_w: float, atr_val: float, adx_val: float):
     if atr_val <= 0:
         return 2, 0.0
@@ -126,6 +130,7 @@ def macd_nudged_step(side: str, base_step: float, macd_state: str, atr_val: floa
         return max(0.0, base_step - NUDGE_MULT*atr_val) if macd_state == "Bearish" else (base_step + NUDGE_MULT*atr_val)
 
 def clamp(x, lo, hi): return max(lo, min(hi, x))
+
 def deltas_from_market(px: float, mkt: float, side: str):
     d = abs(px - mkt)
     pct = (d / mkt * 100) if mkt > 0 else 0.0
@@ -146,14 +151,18 @@ if calc:
     base_step = BASE_STEP_MULT * atr
     step = macd_nudged_step(side, base_step, macd, atr)
 
+    # Ladders (L0 at market)
     L = [market]
     if side == "Long":
         L1 = clamp(market - step, zone_lower, zone_upper); L.append(L1)
-        if ladders == 3: L2 = clamp(L1 - step, zone_lower, zone_upper); L.append(L2)
+        if ladders == 3:
+            L2 = clamp(L1 - step, zone_lower, zone_upper); L.append(L2)
     else:
         L1 = clamp(market + step, zone_lower, zone_upper); L.append(L1)
-        if ladders == 3: L2 = clamp(L1 + step, zone_lower, zone_upper); L.append(L2)
+        if ladders == 3:
+            L2 = clamp(L1 + step, zone_lower, zone_upper); L.append(L2)
 
+    # Fixed TP and buffered SL from zone edge
     if side == "Long":
         sl = zone_lower - sl_buf*atr
         tp = market + TP_MULT*atr
@@ -163,11 +172,12 @@ if calc:
 
     # ---------- Results ----------
     st.markdown("## Results")
+
     cols = st.columns(len(L))
     for i, px in enumerate(L):
         d, pct, where = deltas_from_market(px, market, side)
         title_top = "L0" if i == 0 else f"L{i}"
-        subtitle = "Market Price" if i == 0 else ""
+        subtitle = "Market Price" if i == 0 else ""   # no stars under L1/L2
         with cols[i]:
             st.markdown(f"**{title_top}**")
             if subtitle: st.caption(f"**{subtitle}**")
