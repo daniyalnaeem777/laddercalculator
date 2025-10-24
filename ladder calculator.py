@@ -1,17 +1,17 @@
-# ladder_calculator.py — Ladder Calculator (clean boxes, no extra white outlines)
+# ladder_calculator.py — Ladder Calculator (clean boxes, corrected capitalization)
 
 import streamlit as st
 
 st.set_page_config(page_title="Ladder Calculator", page_icon="📊", layout="centered")
 
-# ---------- Minimal, precise CSS (Helvetica + tidy; no input box borders overridden) ----------
+# ---------- Minimal, precise CSS ----------
 st.markdown("""
 <style>
   * { font-family: Helvetica, Arial, sans-serif !important; }
   h1,h2,h3,h4,strong,b { font-weight: 700 !important; letter-spacing:.2px; }
   .subtitle { font-style: italic; margin-top:-6px; margin-bottom:14px; }
 
-  /* ONLY style the four section cards (st.container with border=True). Don't touch inputs. */
+  /* ONLY style the four section cards (st.container with border=True). */
   [data-testid="stContainer"] > div[style*="border: 1px solid"] {
     border: 1px solid rgba(255,255,255,0.85) !important;  /* crisp white outline */
     border-radius: 14px !important;
@@ -39,7 +39,7 @@ st.markdown("""
   .val-green { background:#1d3b1d; color:#66ff91; }
   .val-blue  { background:#1d263b; color:#8eb8ff; }
 
-  /* Make number inputs readable but DO NOT add borders around their wrappers */
+  /* Inputs readable (no extra borders) */
   .stNumberInput > div > div > input { font-weight:700; }
 </style>
 """, unsafe_allow_html=True)
@@ -54,20 +54,20 @@ TP_MULT = 2.0            # fixed TP = 2.0 × ATR
 st.markdown("# Ladder Calculator")
 st.markdown("<div class='subtitle'>Dynamic Ladder Mapping for Smarter Positioning</div>", unsafe_allow_html=True)
 
-# ============= BOX 1: Direction (H3 size) =============
+# ============= BOX 1: Direction =============
 with st.container(border=True):
     st.markdown("### **Direction**")
     side = st.radio("Direction", ["Long", "Short"], horizontal=True, label_visibility="collapsed")
 
 st.write("")
 
-# ============= BOX 2: Market Structure (no white boxes around inputs) =============
+# ============= BOX 2: Market Structure =============
 with st.container(border=True):
     st.markdown("### **Market Structure**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown("**Market price**")
-        market = st.number_input("Market price", min_value=0.0, format="%.4f",
+        st.markdown("**Market Price**")
+        market = st.number_input("Market Price", min_value=0.0, format="%.4f",
                                  key="mkt", label_visibility="collapsed")
     with c2:
         st.markdown("**Upper Zone (UZ)**")
@@ -103,13 +103,13 @@ with st.container(border=True):
 
 st.write("")
 
-# ============= BOX 4: Stop-loss buffer (same heading size as Direction) =============
+# ============= BOX 4: Stop-Loss Buffer =============
 with st.container(border=True):
-    st.markdown("### **Stop-loss buffer**")
+    st.markdown("### **Stop-Loss Buffer**")
     st.markdown("<div class='slbtn'>", unsafe_allow_html=True)
     slbuf_choice = st.radio(
-        "Choose SL buffer × ATR",
-        ["SL buffer = 1.0 × ATR", "SL buffer = 1.5 × ATR"],
+        "Choose SL Buffer × ATR",
+        ["SL Buffer = 1.0 × ATR", "SL Buffer = 1.5 × ATR"],
         horizontal=True, label_visibility="collapsed", index=0
     )
     st.markdown("</div>", unsafe_allow_html=True)
